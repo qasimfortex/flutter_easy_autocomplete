@@ -32,6 +32,7 @@ class FilterableList extends StatelessWidget {
   final Function(String) onItemTapped;
   final double elevation;
   final double maxListHeight;
+  final Decoration? suggestionDecoration;
   final TextStyle suggestionTextStyle;
   final Color? suggestionBackgroundColor;
   final bool loading;
@@ -44,6 +45,7 @@ class FilterableList extends StatelessWidget {
       this.suggestionBuilder,
       this.elevation = 5,
       this.maxListHeight = 150,
+      this.suggestionDecoration,
       this.suggestionTextStyle = const TextStyle(),
       this.suggestionBackgroundColor,
       this.loading = false,
@@ -64,6 +66,7 @@ class FilterableList extends StatelessWidget {
       color: _suggestionBackgroundColor,
       child: Container(
         constraints: BoxConstraints(maxHeight: maxListHeight),
+        decoration: suggestionDecoration,
         child: Visibility(
           visible: items.isNotEmpty || loading,
           child: ListView.builder(
@@ -76,11 +79,9 @@ class FilterableList extends StatelessWidget {
                     alignment: Alignment.center,
                     padding: EdgeInsets.all(10),
                     child: Visibility(
-                      visible: progressIndicatorBuilder != null,
-                      child: progressIndicatorBuilder!,
-                      replacement: CircularProgressIndicator()
-                    )
-                );
+                        visible: progressIndicatorBuilder != null,
+                        child: progressIndicatorBuilder!,
+                        replacement: CircularProgressIndicator()));
               }
 
               if (suggestionBuilder != null) {
