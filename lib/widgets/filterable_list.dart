@@ -38,10 +38,12 @@ class FilterableList extends StatelessWidget {
   final bool loading;
   final Widget Function(String data)? suggestionBuilder;
   final Widget? progressIndicatorBuilder;
+  final TextStyle? sortedHeadingsTextStyle;
 
   const FilterableList(
       {required this.items,
       required this.onItemTapped,
+      this.sortedHeadingsTextStyle,
       this.suggestionBuilder,
       this.elevation = 5,
       this.maxListHeight = 150,
@@ -70,37 +72,46 @@ class FilterableList extends StatelessWidget {
         child: Visibility(
           visible: items.isNotEmpty || loading,
           child: ListView.builder(
-            shrinkWrap: true,
-            padding: const EdgeInsets.all(5),
-            itemCount: loading ? 1 : items.length,
-            itemBuilder: (context, index) {
-              if (loading) {
-                return Container(
-                    alignment: Alignment.center,
-                    padding: EdgeInsets.all(10),
-                    child: Visibility(
-                        visible: progressIndicatorBuilder != null,
-                        child: progressIndicatorBuilder!,
-                        replacement: CircularProgressIndicator()));
-              }
-
-              if (suggestionBuilder != null) {
-                return InkWell(
-                    child: suggestionBuilder!(items[index]),
-                    onTap: () => onItemTapped(items[index]));
-              }
-
-              return Material(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(5),
+              itemCount: loading ? 1 : items.length,
+              itemBuilder: (context, index) {
+                if (loading) {
+                  return Container(
+                      alignment: Alignment.center,
+                      padding: EdgeInsets.all(10),
+                      child: Visibility(
+                          visible: progressIndicatorBuilder != null,
+                          replacement: CircularProgressIndicator(),
+                          child: progressIndicatorBuilder!));
+                }
+                String currentItem = items[index];
+                bool isHeading = currentItem.length == 1 &&
+                    RegExp(r'^[A-Z]$').hasMatch(currentItem);
+                if (isHeading) {
+                  return Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.fromLTRB(12, 5, 5, 5),
+                    alignment: Alignment.centerLeft,
+                    child: Text(currentItem, style: sortedHeadingsTextStyle),
+                  );
+                }
+                if (suggestionBuilder != null) {
+                  return InkWell(
+                    child: suggestionBuilder!(currentItem),
+                    onTap: () => onItemTapped(currentItem),
+                  );
+                }
+                return Material(
                   color: Colors.transparent,
                   child: InkWell(
                       child: Container(
                           width: double.infinity,
                           padding: EdgeInsets.all(5),
-                          child:
-                              Text(items[index], style: suggestionTextStyle)),
-                      onTap: () => onItemTapped(items[index])));
-            },
-          ),
+                          child: Text(currentItem, style: suggestionTextStyle)),
+                      onTap: () => onItemTapped(currentItem)),
+                );
+              }),
         ),
       ),
     );

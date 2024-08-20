@@ -98,6 +98,12 @@ class EasyAutocomplete extends StatefulWidget {
   /// Used to decorate the suggestions list
   final Decoration? suggestionDecoration;
 
+  /// Determines if the suggestions should be sorted and grouped alphabetically
+  final bool sortedSuggestions;
+
+  /// Style for the alphabetical headings if `sortedSuggestions` is true
+  final TextStyle sortedHeadingsTextStyle;
+
   /// Creates a autocomplete widget to help you manage your suggestions
   const EasyAutocomplete(
       {this.suggestions,
@@ -120,7 +126,9 @@ class EasyAutocomplete extends StatefulWidget {
       this.suggestionBackgroundColor,
       this.debounceDuration = const Duration(milliseconds: 400),
       this.validator,
-      this.suggestionDecoration})
+      this.suggestionDecoration,
+      this.sortedSuggestions = false,
+      this.sortedHeadingsTextStyle = const TextStyle()})
       : assert(onChanged != null || controller != null,
             'onChanged and controller parameters cannot be both null at the same time'),
         assert(!(controller != null && initialValue != null),
@@ -185,6 +193,7 @@ class _EasyAutocompleteState extends State<EasyAutocomplete> {
                       suggestionDecoration: widget.suggestionDecoration,
                       progressIndicatorBuilder: widget.progressIndicatorBuilder,
                       items: _suggestions,
+                      sortedHeadingsTextStyle: widget.sortedHeadingsTextStyle,
                       suggestionTextStyle: widget.suggestionTextStyle,
                       suggestionBackgroundColor:
                           widget.suggestionBackgroundColor,
@@ -218,9 +227,44 @@ class _EasyAutocompleteState extends State<EasyAutocomplete> {
   Future<void> updateSuggestions(String input) async {
     rebuildOverlay();
     if (widget.suggestions != null) {
+      // Filter the suggestions based on the input
       _suggestions = widget.suggestions!.where((element) {
         return element.toLowerCase().contains(input.toLowerCase());
       }).toList();
+
+      // Ensure the typed value is added as a suggestion if it's not in the list
+      if (input.isNotEmpty &&
+          !_suggestions
+              .any((element) => element.toLowerCase() == input.toLowerCase())) {
+        _suggestions.insert(0, input);
+      }
+
+      if (input.length == 1) {
+        _suggestions =
+            _suggestions.where((element) => element != input).toList();
+      }
+      if (widget.sortedSuggestions && _suggestions.length > 1) {
+        _suggestions.sort((a, b) => a.compareTo(b));
+
+        List<String> groupedSuggestions = [];
+        String currentGroup = '';
+
+        for (var suggestion in _suggestions) {
+          String group = suggestion[0].toUpperCase();
+
+          // Add a new heading only if it's a different group and not the typed input
+          if (group != currentGroup &&
+              suggestion.toLowerCase() != input.toLowerCase()) {
+            currentGroup = group;
+            groupedSuggestions.add(group); // Add heading
+          }
+
+          groupedSuggestions.add(suggestion); // Add suggestion
+        }
+
+        _suggestions = groupedSuggestions;
+      }
+
       rebuildOverlay();
     } else if (widget.asyncSuggestions != null) {
       if (_previousAsyncSearchText == input && input.isNotEmpty) return;
@@ -234,6 +278,38 @@ class _EasyAutocompleteState extends State<EasyAutocomplete> {
 
       _debounce = Timer(widget.debounceDuration, () async {
         _suggestions = await widget.asyncSuggestions!(input);
+
+        // Ensure the typed value is added as a suggestion if it's not in the list
+        if (input.isNotEmpty &&
+            !_suggestions.any(
+                (element) => element.toLowerCase() == input.toLowerCase())) {
+          _suggestions.insert(0, input);
+        }
+
+        // Sort and group suggestions alphabetically only if sortedSuggestions is true
+        // and the suggestions list has more than one item
+        if (widget.sortedSuggestions && _suggestions.length > 1) {
+          _suggestions.sort((a, b) => a.compareTo(b));
+
+          List<String> groupedSuggestions = [];
+          String currentGroup = '';
+
+          for (var suggestion in _suggestions) {
+            String group = suggestion[0].toUpperCase();
+
+            // Add a new heading only if it's a different group and not the typed input
+            if (group != currentGroup &&
+                suggestion.toLowerCase() != input.toLowerCase()) {
+              currentGroup = group;
+              groupedSuggestions.add(group); // Add heading
+            }
+
+            groupedSuggestions.add(suggestion); // Add suggestion
+          }
+
+          _suggestions = groupedSuggestions;
+        }
+
         setState(() => _isLoading = false);
         rebuildOverlay();
       });
